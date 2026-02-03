@@ -3,4 +3,13 @@ project(FileSystem)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(FileSystem main.cpp)
+add_executable(FileSystem main.cpp
+        Node.cpp
+        Node.h
+        IDKey.cpp
+        IDKey.h
+        FileNode.cpp
+        FileNode.h
+        DirNode.cpp
+        DirNode.h
+)
