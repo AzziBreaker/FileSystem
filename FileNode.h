@@ -17,7 +17,7 @@ public:
 public:
     unsigned getFirstBlock() const {return this->firstBlock;}
     unsigned getSize() const {return this->size;}
-    bool isDir() const;
+    bool isDir() const override;
 
 private:
     unsigned firstBlock;

@@ -7,6 +7,8 @@
 
 #include <string>
 
+class DirNode;
+
 class Node
 {
 public:
@@ -18,11 +20,20 @@ public:
 public:
     std::string getName() const {return this->name;}
     unsigned getId() const {return this->id;}
+    DirNode* getParent() const;
+
+public:
     virtual bool isDir() const = 0;
+
+public:
+    void setId(unsigned);
+    void setName(std::string&);
     void setCopy();
+    void setParent(DirNode*);
 
 private:
     std::string name;
+    DirNode* parent;
     unsigned id;
     bool isCopy;
 };

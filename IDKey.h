@@ -6,19 +6,28 @@
 #define FILESYSTEM_IDKEY_H
 
 #include <string>
+#include "IDKeyOnDisk.h"
 
-struct IDKey
+class IDKey
 {
+public:
+    IDKey() = default;
+    IDKey(unsigned id, unsigned parentId,unsigned firstBlock,unsigned size, bool dir, std::string&);
+    IDKey(const IDKeyOnDisk&);
+    IDKey(const IDKey&) = default;
+    IDKey& operator=(const IDKey&) = default;
+    ~IDKey() = default;
+
+public:
+    IDKeyOnDisk toDisk() const;
+
+public:
     std::string name;
     unsigned ID;
     unsigned parentID;
     unsigned firstBlock;
     unsigned size;
     bool isDir;
-
-    IDKey(unsigned id, unsigned parentId,unsigned firstBlock,unsigned size, bool dir):
-    ID(id),parentID(parentId),firstBlock(firstBlock),size(size), isDir(dir)
-    {};
 };
 
 

@@ -15,7 +15,7 @@ class FileMetadata
 {
 public:
     FileMetadata();
-    FileMetadata(std::string&, unsigned);
+    FileMetadata(const std::string&, unsigned);
     explicit FileMetadata(const FileMetadataOnDisk&);
     ~FileMetadata() = default;
 
@@ -29,6 +29,7 @@ public:
     unsigned blockSize;
     unsigned idKeys;
     unsigned idKeyOffset;
+    unsigned isUsedOffset;
     unsigned dataBlocks;
     unsigned dataBlockOffset;
 

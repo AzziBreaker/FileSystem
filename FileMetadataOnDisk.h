@@ -14,6 +14,7 @@ struct FileMetadataOnDisk
     unsigned blockSize;
     unsigned idKeys;
     unsigned idKeyOffset;
+    unsigned isUsedOffset;
     unsigned dataBlocks;
     unsigned dataBlockOffset;
 };

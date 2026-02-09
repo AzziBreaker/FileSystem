@@ -1,7 +1,21 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
-#include "FileMetadata.h"
+#include "FileSystem.h"
+
+std::vector<std::string> tokenize(const std::string& line)
+{
+    std::istringstream iss(line);
+    std::vector<std::string> tokens;
+    std::string token;
+
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
 
 std::string addBin(const std::string& name)
 {
@@ -14,64 +28,42 @@ std::string addBin(const std::string& name)
 
 int main()
 {
-    FileMetadata* fileMetadata = nullptr;
-    FileMetadataOnDisk diskMetadata;
     std::cout << "Hello! Which file system would you like to open? :)\n";
     std::string fsFilename;
 
-    //slagam filesystem metadata
-
     //TODO: dali e validno
     std::cin >> fsFilename;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     fsFilename = addBin(fsFilename);
 
-    std::fstream fs;
+    FileSystem fs(fsFilename);
 
-    fs.open(fsFilename, std::ios::in | std::ios::out | std::ios::binary);
+    std::string line;
+    std::vector<std::string> tokens;
 
-    if (!fs.is_open())
+    std::cout << "BOOMED BEFORE COMMANDS!\n";
+    do
     {
+        std::getline(std::cin, line);
+        tokens = tokenize(line);
 
-        fs.open(fsFilename,std::ios::out | std::ios::binary | std::ios::trunc);
-
-        if (!fs)
+        if(tokens[0] == "mkdir")
         {
-            std::cerr << "Failed to create filesystem file\n";
-            return 1;
+            fs.mkdir(tokens[1]);
+        }
+        else if (tokens[0] == "rmdir")
+        {
+            //fs.rmdir(tokens[1]);
+        }
+        else
+        {
+            std::cout << "Invalid command!\n";
+            continue;
         }
 
-        std::cout << fsFilename << " opened successfully!\n";
-        std::cout << "What is the file max size?\n";
-
-        unsigned maxSize;
-        std::cin >> maxSize;
-
-        fileMetadata = new FileMetadata(fsFilename,maxSize);
-
-        //initializeFileSystem(fs);
-    }
-    else
-    {
-        try
-        {
-            fs.read(reinterpret_cast<char*>(&diskMetadata),sizeof(FileMetadataOnDisk));
-            fileMetadata = new FileMetadata(diskMetadata);
-        } catch (...)
-        {
-            std::cout << "File reading problem\n";
-        }
-    }
+    } while (tokens[0] != "close");
 
 
-    fileMetadata->print(std::cout);
-
-    std::string command;
-
-    FileMetadataOnDisk disk = fileMetadata->toDisk();
-    fs.write(reinterpret_cast<const char*>(&disk),sizeof(disk));
-
-
-    fs.close();
-    delete fileMetadata;
+    fs.save();
 }

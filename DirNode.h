@@ -13,18 +13,19 @@
 class DirNode : public Node
 {
 public:
-    DirNode();
+    DirNode() = default;
     DirNode& operator=(const DirNode&);
     DirNode(const DirNode&);
-    virtual ~DirNode() override;
+    virtual ~DirNode() = default;
 
-
-    //TODO::izmisli kakvo kude se dobavq (addchild i getchild)
 public:
-    bool isDir() const;
+    bool isDir() const override;
+    void addChild(Node* node);
+    Node* getChild(std::string&);
+
 
 private:
-    std::vector<unsigned> children;
+    std::vector<Node*> children;
 };
 
 
