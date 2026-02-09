@@ -21,7 +21,7 @@ public:
 
     //TODO::izmisli kakvo kude se dobavq (addchild i getchild)
 public:
-
+    bool isDir() const;
 
 private:
     std::vector<unsigned> children;

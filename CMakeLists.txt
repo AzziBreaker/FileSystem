@@ -12,4 +12,8 @@ add_executable(FileSystem main.cpp
         FileNode.h
         DirNode.cpp
         DirNode.h
+        FileMetadata.cpp
+        FileMetadata.h
+        FileMetadataOnDisk.cpp
+        FileMetadataOnDisk.h
 )

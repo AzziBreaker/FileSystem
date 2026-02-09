@@ -3,3 +3,8 @@
 //
 
 #include "FileNode.h"
+
+bool FileNode::isDir() const
+{
+    return false;
+}

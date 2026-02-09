@@ -17,6 +17,7 @@ public:
 public:
     unsigned getFirstBlock() const {return this->firstBlock;}
     unsigned getSize() const {return this->size;}
+    bool isDir() const;
 
 private:
     unsigned firstBlock;
