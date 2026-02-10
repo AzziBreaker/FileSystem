@@ -24,6 +24,8 @@ public:
 
 public:
     virtual bool isDir() const = 0;
+    virtual void print() const = 0;
+    virtual unsigned getSize() const = 0;
 
 public:
     void setId(unsigned);

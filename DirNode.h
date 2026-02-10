@@ -21,11 +21,18 @@ public:
 public:
     bool isDir() const override;
     void addChild(Node* node);
-    Node* getChild(std::string&);
 
+public:
+    Node* getChild(std::string&);
+    std::vector<Node*> getChildren() const;
+    inline unsigned getSize() const override {return 0;}
+
+public:
+    void print() const override;
 
 private:
     std::vector<Node*> children;
+
 };
 
 

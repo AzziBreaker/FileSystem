@@ -15,9 +15,10 @@ public:
     virtual ~FileNode() = default;
 
 public:
-    unsigned getFirstBlock() const {return this->firstBlock;}
-    unsigned getSize() const {return this->size;}
+    inline unsigned getFirstBlock() const {return this->firstBlock;}
+    inline unsigned getSize() const override {return this->size;}
     bool isDir() const override;
+    void print() const override;
 
 public:
     void setFirstBlock(unsigned);

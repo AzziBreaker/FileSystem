@@ -69,11 +69,11 @@ int main()
         }
         else if (tokens[0] == "ls")
         {
-            //fs.ls();
+            fs.ls(tokens[1]);
         }
         else if (tokens[0] == "cd")
         {
-            //fs.cd();
+            fs.cd(tokens[1]);
         }
         else if (tokens[0] == "cp")
         {

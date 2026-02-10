@@ -30,6 +30,9 @@ private:
 
 public:
     void mkdir(std::string& path);
+    void rmdir(std::string& path);
+    void ls(std::string& path);
+    void cd(std::string& path);
 
     //change to private and add getters setters
 public:

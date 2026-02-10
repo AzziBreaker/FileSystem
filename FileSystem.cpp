@@ -68,9 +68,9 @@ void FileSystem::save()
             diskKey = it->second.toDisk();
             //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << " and parentID: " << it->second.parentID << "\n";
         }
-        auto pos = dataFile.tellp();
+        //auto pos = dataFile.tellp();
         dataFile.write(reinterpret_cast<const char*>(&diskKey),sizeof(diskKey));
-        std::cout << "Wrote ID " << id << " at offset " << pos << "\n";
+        //std::cout << "Wrote ID " << id << " at offset " << pos << "\n";
     }
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
@@ -199,7 +199,7 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
     std::cout << "File system created successfully!\n";
 }
 
-void FileSystem::mkdir(std::string &path)
+void FileSystem::mkdir(std::string& path)
 {
     std::string parentPath, dirName;
     if (!splitPath(path,parentPath,dirName))
@@ -244,6 +244,80 @@ void FileSystem::mkdir(std::string &path)
     dir->setParent(parent);
 
     parent->addChild(dir);
+
+    save();
+}
+
+void FileSystem::rmdir(std::string& path)
+{
+    DirNode* node = nullptr;
+
+    if (path.empty())
+    {
+        node = currDir;
+    }
+    else
+    {
+        node = reachPath(path);
+
+        if (!node)
+        {
+            std::cout << "Directory doesnt exist!";
+            return;
+        }
+    }
+
+    if (!node->getChildren().empty())
+    {
+        std::cout << "Cannot remove directory! It has children!\n";
+    }
+
+
+}
+
+void FileSystem::ls(std::string& path)
+{
+    DirNode* node;
+
+    if (path.empty())
+    {
+        node = currDir;
+    }
+    else
+    {
+        node = reachPath(path);
+
+        if (!node)
+        {
+            std::cout << "Directory doesnt exist!";
+            return;
+        }
+    }
+
+    node->print();
+}
+
+void FileSystem::cd(std::string &path)
+{
+    DirNode* node;
+
+    if (path.empty())
+    {
+        std::cout << "Invalid path entered!\n";
+        return;
+    }
+    else
+    {
+        node = reachPath(path);
+
+        if (!node)
+        {
+            std::cout << "Directory doesnt exist!";
+            return;
+        }
+    }
+
+    this->currDir = node;
 }
 
 

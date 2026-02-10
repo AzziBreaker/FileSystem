@@ -4,6 +4,8 @@
 
 #include "DirNode.h"
 
+#include <iostream>
+
 bool DirNode::isDir() const
 {
     return true;
@@ -29,4 +31,25 @@ Node* DirNode::getChild(std::string& name)
     }
 
     return nullptr;
+}
+
+std::vector<Node*> DirNode::getChildren() const
+{
+    return this->children;
+}
+
+void DirNode::print() const
+{
+    std::cout << this->getName() << ":\n";
+
+    for (Node* node: children)
+    {
+        std::cout << "  --" << node->getName();
+        if (node->isDir())
+        {
+            std::cout << "\n";
+            continue;
+        }
+        std::cout << " - size: "<< node->getSize() << "\n";
+    }
 }

@@ -9,6 +9,11 @@ bool FileNode::isDir() const
     return false;
 }
 
+void FileNode::print() const
+{
+
+}
+
 void FileNode::setFirstBlock(unsigned block)
 {
     this->firstBlock = block;
