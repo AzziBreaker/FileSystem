@@ -21,8 +21,8 @@ public:
 
 public:
     void save();
-    void buildTree();
-    Node* getRoot();
+
+    DirNode* getRoot();
     void addKey(const IDKey&, const IDKey&);
 
 private:
@@ -40,6 +40,11 @@ public:
     DirNode* root;
     DirNode* currDir;
     unsigned nextID;
+    unsigned idKeysCount;
+
+private:
+    void loadIsUsedTable();
+    void buildTree();
 
 private:
     bool splitPath(const std::string& path, std::string& parentPath, std::string& name);

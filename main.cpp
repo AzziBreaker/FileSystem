@@ -42,24 +42,38 @@ int main()
     std::string line;
     std::vector<std::string> tokens;
 
-    std::cout << "BOOMED BEFORE COMMANDS!\n";
+
+    //on creation of filstystem doesnt save properly AND on load doesnt create data tree
     do
     {
-        std::getline(std::cin, line);
-        tokens = tokenize(line);
 
-        if(tokens[0] == "mkdir")
+        //std::cout << "Going inside!\n";
+        std::getline(std::cin, line);
+        //std::cout << "In between!\n";
+        tokens = tokenize(line);
+        //std::cout << "Reached end of tokenize\n";
+        if (tokens.empty())
         {
+            std::cout << "Invalid command!";
+            continue;
+        }
+
+        if(tokens[0] == "mkdir" && !tokens[1].empty())
+        {
+           // std::cout << "STARTING TO MAKE DIRECTORY!\n";
             fs.mkdir(tokens[1]);
         }
         else if (tokens[0] == "rmdir")
         {
             //fs.rmdir(tokens[1]);
         }
+        else if (tokens[0] == "save")
+        {
+            fs.save();
+        }
         else
         {
             std::cout << "Invalid command!\n";
-            continue;
         }
 
     } while (tokens[0] != "close");

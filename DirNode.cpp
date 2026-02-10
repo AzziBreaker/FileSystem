@@ -17,6 +17,9 @@ void DirNode::addChild(Node* node)
 
 Node* DirNode::getChild(std::string& name)
 {
+    if (this->children.empty())
+        return nullptr;
+
     for (Node* node : this->children)
     {
         if (node->getName() == name && node->isDir())

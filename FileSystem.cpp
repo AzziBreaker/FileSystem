@@ -6,6 +6,7 @@
 
 FileSystem::FileSystem(const std::string& fileName)
 {
+    unsigned maxID = 0;
     dataFile.open(fileName, std::ios::binary | std::ios::in | std::ios::out);
     if (!dataFile) {
         createEmptyFileSystem(fileName);
@@ -15,16 +16,24 @@ FileSystem::FileSystem(const std::string& fileName)
     FileMetadataOnDisk diskMeta{};
     dataFile.read(reinterpret_cast<char*>(&diskMeta), sizeof(diskMeta));
     this->fileMetadata = new FileMetadata(diskMeta);
+    this->idKeysCount = fileMetadata->idKeys;
 
     for (unsigned i = 0; i < fileMetadata->idKeys; ++i)
     {
         IDKeyOnDisk diskKey{};
         dataFile.read(reinterpret_cast<char*>(&diskKey), sizeof(diskKey));
 
+        if (maxID < diskKey.ID)
+        {
+            maxID = diskKey.ID;
+        }
         IDKey key(diskKey);
         this->idKeys.insert({key.ID,key});
+
     }
 
+    this->nextID = maxID;
+    this->nextID++;
     std::cout << "File system loaded successfully!\n";
 
     //loadIsUsedTable();
@@ -50,12 +59,17 @@ void FileSystem::save()
     for (unsigned id = 0; id < fileMetadata->idKeys; ++id)
     {
         IDKeyOnDisk diskKey{};
-        if (idKeys.contains(id))
+        auto it = idKeys.find(id);
+        if (it != idKeys.end())
         {
-            diskKey = idKeys[id].toDisk();
+            diskKey = it->second.toDisk();
+            //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << "\n";
         }
+
         dataFile.write(reinterpret_cast<const char*>(&diskKey), sizeof(diskKey));
     }
+
+
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
     for (bool used : isUsed)
@@ -75,7 +89,7 @@ void FileSystem::buildTree()
 {
 }
 
-Node* FileSystem::getRoot()
+DirNode* FileSystem::getRoot()
 {
     return this->root;
 }
@@ -83,7 +97,7 @@ Node* FileSystem::getRoot()
 void FileSystem::addKey(const IDKey& key, const IDKey& parent)
 {
     this->idKeys.insert({key.ID,key});
-
+    this->idKeysCount++;
 }
 
 void FileSystem::createEmptyFileSystem(const std::string& fileName)
@@ -101,6 +115,7 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
 
     unsigned maxSize;
     std::cin >> maxSize;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     this->fileMetadata = new FileMetadata(fileName,maxSize);
 
@@ -118,7 +133,7 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
     unsigned numBlocks = maxSize / fileMetadata->blockSize;
     isUsed.resize(numBlocks, false);
 
-    nextID++;
+    this->nextID = 1;
 
     FileMetadataOnDisk disk = fileMetadata->toDisk();
     dataFile.seekp(0, std::ios::beg);
@@ -163,13 +178,17 @@ void FileSystem::mkdir(std::string &path)
         throw;
     }
 
+    //????????
     if (parent->getChild(dirName)) {
         std::cout << "Directory already exists!\n";
         throw;
     }
 
+    std::cout << "Creating directory " << dirName << " in dir: " << parent->getName() << " with ID: " << parent->getId() << "\n";
+
     IDKey key(nextID++, parent->getId(), 0, 0, true, dirName);
-    addKey(key, idKeys[parent->getId()]);
+    idKeys[key.ID] = key;
+    this->idKeysCount++;
 
     fileMetadata->idKeys++;
 
@@ -180,6 +199,21 @@ void FileSystem::mkdir(std::string &path)
     dir->setParent(parent);
 
     parent->addChild(dir);
+}
+
+void FileSystem::loadIsUsedTable()
+{
+    unsigned blocks = fileMetadata->dataBlocks;
+    isUsed.resize(blocks);
+
+    dataFile.seekg(fileMetadata->isUsedOffset, std::ios::beg);
+
+    for (unsigned i = 0; i < blocks; i++)
+    {
+        bool used;
+        dataFile.read(reinterpret_cast<char*>(&used), sizeof(bool));
+        isUsed[i] = used;
+    }
 }
 
 bool FileSystem::splitPath(const std::string& path, std::string& parentPath, std::string& name)
