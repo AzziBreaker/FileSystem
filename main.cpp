@@ -42,13 +42,14 @@ int main()
     std::string line;
     std::vector<std::string> tokens;
 
-
-    //on creation of filstystem doesnt save properly AND on load doesnt create data tree
     do
     {
-
         //std::cout << "Going inside!\n";
         std::getline(std::cin, line);
+        if (line.empty())
+        {
+            continue;
+        }
         //std::cout << "In between!\n";
         tokens = tokenize(line);
         //std::cout << "Reached end of tokenize\n";
@@ -65,7 +66,7 @@ int main()
         }
         else if (tokens[0] == "rmdir")
         {
-            //fs.rmdir(tokens[1]);
+            fs.rmdir(tokens[1]);
         }
         else if (tokens[0] == "ls")
         {

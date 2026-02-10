@@ -62,15 +62,15 @@ void FileSystem::save()
     {
         IDKeyOnDisk diskKey{};
 
-        auto it = idKeys.find(id);
+        std::unordered_map<unsigned, IDKey>::iterator it = idKeys.find(id);
         if (it != idKeys.end())
         {
             diskKey = it->second.toDisk();
             //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << " and parentID: " << it->second.parentID << "\n";
         }
-        //auto pos = dataFile.tellp();
+
         dataFile.write(reinterpret_cast<const char*>(&diskKey),sizeof(diskKey));
-        //std::cout << "Wrote ID " << id << " at offset " << pos << "\n";
+
     }
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
@@ -91,8 +91,12 @@ void FileSystem::buildTree()
 {
     std::unordered_map<unsigned,Node*> nodes;
 
-    for (auto& [id,key] : idKeys)
+    std::unordered_map<unsigned, IDKey>::iterator it = idKeys.begin();
+    while (it != idKeys.end())
     {
+        unsigned id = it->first;
+        IDKey& key = it->second;
+
         Node* node;
         if (key.isDir)
         {
@@ -107,16 +111,23 @@ void FileSystem::buildTree()
         node->setId(key.ID);
 
         nodes[key.ID] = node;
+
+        it++;
     }
 
-    for (auto& [id, key] : idKeys)
+    it = idKeys.begin();
+    while (it!=idKeys.end())
     {
+        unsigned id = it->first;
+        IDKey& key = it->second;
+
         Node* child = nodes[key.ID];
 
         if (key.ID == 0)
         {
             root = dynamic_cast<DirNode*>(nodes[id]);
             root->setParent(nullptr);
+            it++;
             continue;
         }
 
@@ -130,6 +141,8 @@ void FileSystem::buildTree()
 
         child->setParent(parent);
         parent->addChild(child);
+
+        it++;
     }
 
     currDir = root;
@@ -255,6 +268,7 @@ void FileSystem::rmdir(std::string& path)
     if (path.empty())
     {
         node = currDir;
+        currDir = root;
     }
     else
     {
@@ -262,17 +276,34 @@ void FileSystem::rmdir(std::string& path)
 
         if (!node)
         {
-            std::cout << "Directory doesnt exist!";
+            std::cout << "Directory doesnt exist!\n";
             return;
         }
+    }
+
+    if (node==root)
+    {
+        std::cout << "Cannot delete root!\n";
+        return;
     }
 
     if (!node->getChildren().empty())
     {
         std::cout << "Cannot remove directory! It has children!\n";
+        return;
     }
 
+    DirNode* parent = node->getParent();
+    parent->removeChild(node);
 
+    this->idKeys.erase(node->getId());
+
+    this->idKeysCount = idKeys.size();
+
+    delete node;
+    std::cout << "Removed directory!\n";
+
+    save();
 }
 
 void FileSystem::ls(std::string& path)
@@ -320,7 +351,6 @@ void FileSystem::cd(std::string &path)
     this->currDir = node;
 }
 
-
 void FileSystem::loadIsUsedTable()
 {
     unsigned blocks = fileMetadata->dataBlocks;
@@ -338,6 +368,7 @@ void FileSystem::loadIsUsedTable()
 
 bool FileSystem::splitPath(const std::string& path, std::string& parentPath, std::string& name)
 {
+    //neznam npos kak se vrushta sus unsigned???????
     auto pos = path.find_last_of('/');
     if (pos == std::string::npos)
     {

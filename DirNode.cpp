@@ -17,6 +17,20 @@ void DirNode::addChild(Node* node)
     this->children.push_back(node);
 }
 
+void DirNode::removeChild(Node* node)
+{
+    std::vector<Node*>::iterator it = children.begin();
+    while (it != children.end())
+    {
+        if (*it == node)
+        {
+            children.erase(it);
+            return;
+        }
+        it++;
+    }
+}
+
 Node* DirNode::getChild(std::string& name)
 {
     if (this->children.empty())

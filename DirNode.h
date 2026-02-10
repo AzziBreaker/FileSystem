@@ -21,6 +21,7 @@ public:
 public:
     bool isDir() const override;
     void addChild(Node* node);
+    void removeChild(Node* node);
 
 public:
     Node* getChild(std::string&);
