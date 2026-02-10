@@ -13,6 +13,7 @@ FileMetadata::FileMetadata()
     this->blockSize = 0;
     this->dataBlocks = 0;
     this->idKeyOffset = 0;
+    this->isUsedOffset = 0;
     this->dataBlockOffset = 0;
 }
 
@@ -23,14 +24,19 @@ FileMetadata::FileMetadata(const std::string& name, unsigned maxSize)
     this->maxSize = maxSize;
     //hardcoded for now
     this->blockSize = 512;
-    this->idKeyOffset = sizeof(FileMetadata);
+    this->idKeyOffset = sizeof(FileMetadataOnDisk);
     this->idKeys = 1;
 
-    unsigned maxIDKeys = maxSize / 4096;
+    this->maxIDKeys = maxSize / 512;
 
     this->isUsedOffset = idKeyOffset + maxIDKeys*sizeof(IDKeyOnDisk);
     this->dataBlockOffset = isUsedOffset + (maxSize / blockSize);
     this->dataBlocks = (maxSize - dataBlockOffset) / blockSize;
+
+    if (dataBlocks == 0) {
+        std::cout << "Max size too small for header + tables + at least one block\n";
+        throw;
+    }
 }
 
 FileMetadata::FileMetadata(const FileMetadataOnDisk& d)
@@ -44,13 +50,14 @@ FileMetadata::FileMetadata(const FileMetadataOnDisk& d)
     this->isUsedOffset = d.isUsedOffset;
     this->dataBlocks = d.dataBlocks;
     this->dataBlockOffset = d.dataBlockOffset;
+    this->maxIDKeys = maxSize / 4096;
 
 }
 
 void FileMetadata::print(std::ostream& out) const
 {
     out << this->name << ":\n  MaxSize: "<< maxSize << "\n  BlockSize: " << blockSize<<"\n  DataBlocks: " << dataBlocks << "\n  IdKeys: "
-        << idKeys << "\n";
+        << idKeys << "\n  IdKeysOffset: " <<idKeyOffset << "\n  IsUsedOffset: " << isUsedOffset <<"\n  MaxIds: " << maxIDKeys << "\n";
 }
 
 FileMetadataOnDisk FileMetadata::toDisk() const

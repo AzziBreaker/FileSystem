@@ -5,6 +5,8 @@
 #ifndef FILESYSTEM_FILEMETADATA_H
 #define FILESYSTEM_FILEMETADATA_H
 
+
+
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -32,6 +34,7 @@ public:
     unsigned isUsedOffset;
     unsigned dataBlocks;
     unsigned dataBlockOffset;
+    unsigned maxIDKeys;
 
 };
 

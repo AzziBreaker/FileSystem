@@ -36,9 +36,9 @@ FileSystem::FileSystem(const std::string& fileName)
     this->nextID++;
     std::cout << "File system loaded successfully!\n";
 
-    //loadIsUsedTable();
+    this->loadIsUsedTable();
 
-    //buildTree();
+    this->buildTree();
 }
 
 FileSystem::~FileSystem()
@@ -49,34 +49,36 @@ FileSystem::~FileSystem()
 
 void FileSystem::save()
 {
-    fileMetadata->print(std::cout);
+    //fileMetadata->print(std::cout);
 
     FileMetadataOnDisk meta = fileMetadata->toDisk();
     dataFile.seekp(0, std::ios::beg);
     dataFile.write(reinterpret_cast<const char*>(&meta), sizeof(meta));
 
+    //std::cout << "Offset for idkeys is: " << fileMetadata->idKeyOffset << "\n";
+
     dataFile.seekp(fileMetadata->idKeyOffset, std::ios::beg);
-    for (unsigned id = 0; id < fileMetadata->idKeys; ++id)
+    for (unsigned id = 0; id < nextID; ++id)
     {
         IDKeyOnDisk diskKey{};
+
         auto it = idKeys.find(id);
         if (it != idKeys.end())
         {
             diskKey = it->second.toDisk();
-            //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << "\n";
+            //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << " and parentID: " << it->second.parentID << "\n";
         }
-
-        dataFile.write(reinterpret_cast<const char*>(&diskKey), sizeof(diskKey));
+        auto pos = dataFile.tellp();
+        dataFile.write(reinterpret_cast<const char*>(&diskKey),sizeof(diskKey));
+        std::cout << "Wrote ID " << id << " at offset " << pos << "\n";
     }
-
-
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
-    for (bool used : isUsed)
-    {
-        bool v = used;
-        dataFile.write(reinterpret_cast<const char*>(&v), sizeof(v));
-    }
+     for (bool used : isUsed)
+     {
+         bool v = used;
+         dataFile.write(reinterpret_cast<const char*>(&v), sizeof(v));
+     }
 
     //blocks
 
@@ -87,6 +89,50 @@ void FileSystem::save()
 
 void FileSystem::buildTree()
 {
+    std::unordered_map<unsigned,Node*> nodes;
+
+    for (auto& [id,key] : idKeys)
+    {
+        Node* node;
+        if (key.isDir)
+        {
+            node = new DirNode();
+        }
+        else
+        {
+            node = new FileNode();
+        }
+
+        node->setName(key.name);
+        node->setId(key.ID);
+
+        nodes[key.ID] = node;
+    }
+
+    for (auto& [id, key] : idKeys)
+    {
+        Node* child = nodes[key.ID];
+
+        if (key.ID == 0)
+        {
+            root = dynamic_cast<DirNode*>(nodes[id]);
+            root->setParent(nullptr);
+            continue;
+        }
+
+        DirNode* parent = dynamic_cast<DirNode*>(nodes[key.parentID]);
+
+        if (!parent)
+        {
+            std::cout << "Error: parentID " << key.parentID << " not found for node " << key.name << "\n";
+            throw;
+        }
+
+        child->setParent(parent);
+        parent->addChild(child);
+    }
+
+    currDir = root;
 }
 
 DirNode* FileSystem::getRoot()
@@ -192,7 +238,6 @@ void FileSystem::mkdir(std::string &path)
 
     fileMetadata->idKeys++;
 
-    //????????????????????????????????????
     DirNode* dir = new DirNode();
     dir->setId(key.ID);
     dir->setName(dirName);
@@ -200,6 +245,7 @@ void FileSystem::mkdir(std::string &path)
 
     parent->addChild(dir);
 }
+
 
 void FileSystem::loadIsUsedTable()
 {

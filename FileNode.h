@@ -9,15 +9,19 @@
 class FileNode : public Node
 {
 public:
-    FileNode();
-    FileNode& operator=(const FileNode&);
-    FileNode(const FileNode&);
-    virtual ~FileNode() override;
+    FileNode() = default;
+    FileNode& operator=(const FileNode&) = default;
+    FileNode(const FileNode&) = default;
+    virtual ~FileNode() = default;
 
 public:
     unsigned getFirstBlock() const {return this->firstBlock;}
     unsigned getSize() const {return this->size;}
     bool isDir() const override;
+
+public:
+    void setFirstBlock(unsigned);
+    void setSize(unsigned);
 
 private:
     unsigned firstBlock;

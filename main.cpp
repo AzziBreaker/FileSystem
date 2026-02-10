@@ -67,9 +67,35 @@ int main()
         {
             //fs.rmdir(tokens[1]);
         }
+        else if (tokens[0] == "ls")
+        {
+            //fs.ls();
+        }
+        else if (tokens[0] == "cd")
+        {
+            //fs.cd();
+        }
+        else if (tokens[0] == "cp")
+        {
+
+        }
+        else if (tokens[0] == "rm")
+        {
+
+        }
+        else if (tokens[0] == "cat")
+        {
+
+        }
         else if (tokens[0] == "save")
         {
+            fs.fileMetadata->print(std::cout);
             fs.save();
+        }
+        else if (tokens[0] == "close")
+        {
+            std::cout << "Goodbye~\n";
+            break;
         }
         else
         {
@@ -78,6 +104,4 @@ int main()
 
     } while (tokens[0] != "close");
 
-
-    fs.save();
 }

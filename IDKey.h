@@ -6,6 +6,8 @@
 #define FILESYSTEM_IDKEY_H
 
 #include <string>
+#include <iostream>
+
 #include "IDKeyOnDisk.h"
 
 class IDKey
