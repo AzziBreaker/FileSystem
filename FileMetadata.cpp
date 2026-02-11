@@ -4,6 +4,7 @@
 
 #include "FileMetadata.h"
 
+#include "DataBlockOnDisk.h"
 #include "IDKey.h"
 
 FileMetadata::FileMetadata()
@@ -23,11 +24,11 @@ FileMetadata::FileMetadata(const std::string& name, unsigned maxSize)
     this->name = name;
     this->maxSize = maxSize;
     //hardcoded for now
-    this->blockSize = 512;
+    this->blockSize = BLOCK_SIZE;
     this->idKeyOffset = sizeof(FileMetadataOnDisk);
     this->idKeys = 1;
 
-    this->maxIDKeys = maxSize / 512;
+    this->maxIDKeys = maxSize / blockSize;
 
     this->isUsedOffset = idKeyOffset + maxIDKeys*sizeof(IDKeyOnDisk);
     this->dataBlockOffset = isUsedOffset + (maxSize / blockSize);
@@ -56,8 +57,15 @@ FileMetadata::FileMetadata(const FileMetadataOnDisk& d)
 
 void FileMetadata::print(std::ostream& out) const
 {
-    out << this->name << ":\n  MaxSize: "<< maxSize << "\n  BlockSize: " << blockSize<<"\n  DataBlocks: " << dataBlocks << "\n  IdKeys: "
-        << idKeys << "\n  IdKeysOffset: " <<idKeyOffset << "\n  IsUsedOffset: " << isUsedOffset <<"\n  MaxIds: " << maxIDKeys << "\n";
+    out << this->name << ":\n"
+    << "  MaxSize: " << maxSize << "\n"
+    << "  BlockSize: " << blockSize << "\n"
+    << "  DataBlocks: " << dataBlocks << "\n"
+    << "  IdKeys: " << idKeys << "\n"
+    << "  MaxIDKeys: " << maxIDKeys << "\n"
+    << "  IdKeyOffset: " << idKeyOffset << "\n"
+    << "  IsUsedOffset: " << isUsedOffset << "\n"
+    << "  DataBlockOffset: " << dataBlockOffset << "\n";
 }
 
 FileMetadataOnDisk FileMetadata::toDisk() const

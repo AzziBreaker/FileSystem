@@ -4,6 +4,13 @@
 
 #include "FileNode.h"
 
+#include "DataBlockOnDisk.h"
+
+FileNode::FileNode()
+{
+    this->firstBlock = END;
+}
+
 bool FileNode::isDir() const
 {
     return false;

@@ -18,4 +18,7 @@ add_executable(FileSystem main.cpp
         IDKeyOnDisk.h
         FileSystem.cpp
         FileSystem.h
+        BlockAllocator.cpp
+        BlockAllocator.h
+        DataBlockOnDisk.h
 )

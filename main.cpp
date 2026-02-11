@@ -44,15 +44,13 @@ int main()
 
     do
     {
-        //std::cout << "Going inside!\n";
         std::getline(std::cin, line);
         if (line.empty())
         {
             continue;
         }
-        //std::cout << "In between!\n";
         tokens = tokenize(line);
-        //std::cout << "Reached end of tokenize\n";
+
         if (tokens.empty())
         {
             std::cout << "Invalid command!";
@@ -61,7 +59,6 @@ int main()
 
         if(tokens[0] == "mkdir" && !tokens[1].empty())
         {
-           // std::cout << "STARTING TO MAKE DIRECTORY!\n";
             fs.mkdir(tokens[1]);
         }
         else if (tokens[0] == "rmdir")
@@ -87,6 +84,10 @@ int main()
         else if (tokens[0] == "cat")
         {
 
+        }
+        else if (tokens[0] == "import")
+        {
+            fs.import(tokens[1], tokens[2], tokens[3]);
         }
         else if (tokens[0] == "save")
         {

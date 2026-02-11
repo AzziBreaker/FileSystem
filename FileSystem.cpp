@@ -39,23 +39,22 @@ FileSystem::FileSystem(const std::string& fileName)
     this->loadIsUsedTable();
 
     this->buildTree();
+
+    this->allocator = new BlockAllocator(dataFile,isUsed,this->fileMetadata->dataBlockOffset);
 }
 
 FileSystem::~FileSystem()
 {
     delete fileMetadata;
+    delete allocator;
     dataFile.close();
 }
 
 void FileSystem::save()
 {
-    //fileMetadata->print(std::cout);
-
     FileMetadataOnDisk meta = fileMetadata->toDisk();
     dataFile.seekp(0, std::ios::beg);
     dataFile.write(reinterpret_cast<const char*>(&meta), sizeof(meta));
-
-    //std::cout << "Offset for idkeys is: " << fileMetadata->idKeyOffset << "\n";
 
     dataFile.seekp(fileMetadata->idKeyOffset, std::ios::beg);
     for (unsigned id = 0; id < nextID; ++id)
@@ -74,15 +73,13 @@ void FileSystem::save()
     }
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
-     for (bool used : isUsed)
-     {
-         bool v = used;
-         dataFile.write(reinterpret_cast<const char*>(&v), sizeof(v));
-     }
+    for (bool used : isUsed)
+    {
+        bool v = used;
+        dataFile.write(reinterpret_cast<const char*>(&v), sizeof(v));
+    }
 
     //blocks
-
-
 
     dataFile.flush();
 }
@@ -349,6 +346,94 @@ void FileSystem::cd(std::string &path)
     }
 
     this->currDir = node;
+}
+
+void FileSystem::import(std::string& source, std::string& destination, std::string &param)
+{
+    std::ifstream sourceFile(source, std::ios::binary|std::ios::ate);
+    if (!sourceFile) {
+        std::cout << "Failed to open source file: " << source << "\n";
+        return;
+    }
+
+    int fileSize = sourceFile.tellg();
+    sourceFile.seekg(0, std::ios::beg);
+
+    if (fileSize<=0)
+    {
+        std::cout << "File is empty! Cant be copied!\n";
+        return;
+    }
+
+    std::vector<char> buffer(fileSize);
+    sourceFile.read(buffer.data(),fileSize);
+
+    sourceFile.close();
+
+    DirNode* parent;
+    std::string path;
+    std::string name;
+
+    if (!splitPath(destination,path,name))
+    {
+        std::cout << "Invalid path!\n";
+        return;
+    }
+
+    parent = reachPath(path);
+
+    Node* exists = parent->getChild(name);;
+    FileNode* fileNode = nullptr;
+
+    IDKey thisKey;
+
+    if (exists)
+    {
+        if (exists->isDir())
+        {
+            std::cout << "Cant have a dir and a file with the same name!\n";
+            return;
+        }
+
+        fileNode = dynamic_cast<FileNode*>(exists);
+    }
+    else
+    {
+        fileNode = new FileNode();
+        fileNode->setName(name);
+        fileNode->setId(nextID++);
+
+        IDKey key(fileNode->getId(),parent->getId(),END,0,false,name);
+        idKeys[key.ID] = key;
+        fileMetadata->idKeys++;
+        idKeysCount++;
+
+        thisKey = key;
+
+        fileNode->setParent(parent);
+        parent->addChild(fileNode);
+    }
+
+    unsigned firstBlock = fileNode->getFirstBlock();
+
+    if (param == "+append" && firstBlock!=END)
+    {
+        allocator->appendFile(firstBlock,buffer.data(),fileSize);
+        fileNode->setSize(fileNode->getSize()+fileSize);
+    }
+    else
+    {
+        if (firstBlock!=END)
+        {
+            allocator->freeBlockChain(firstBlock);
+        }
+        unsigned newFirst = allocator->createFile(buffer.data(),fileSize);
+        fileNode->setFirstBlock(newFirst);
+        fileNode->setSize(fileSize);
+    }
+
+    std::cout << "Imported " << source << " into " << destination << "(" << name << ": " << fileNode->getSize() << " bytes)\n";
+    thisKey.size = fileNode->getSize();
 }
 
 void FileSystem::loadIsUsedTable()

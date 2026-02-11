@@ -9,7 +9,7 @@
 class FileNode : public Node
 {
 public:
-    FileNode() = default;
+    FileNode();
     FileNode& operator=(const FileNode&) = default;
     FileNode(const FileNode&) = default;
     virtual ~FileNode() = default;
