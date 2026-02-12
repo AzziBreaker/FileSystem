@@ -23,6 +23,11 @@ FileSystem::FileSystem(const std::string& fileName)
         IDKeyOnDisk diskKey{};
         dataFile.read(reinterpret_cast<char*>(&diskKey), sizeof(diskKey));
 
+        std::cout << "LOADED ID: " << diskKey.ID
+            << " size: " << diskKey.size
+            << " firstBlock: " << diskKey.firstBlock
+            << "\n";
+
         if (maxID < diskKey.ID)
         {
             maxID = diskKey.ID;
@@ -41,6 +46,8 @@ FileSystem::FileSystem(const std::string& fileName)
     this->buildTree();
 
     this->allocator = new BlockAllocator(dataFile,isUsed,this->fileMetadata->dataBlockOffset);
+
+    save();
 }
 
 FileSystem::~FileSystem()
@@ -52,34 +59,46 @@ FileSystem::~FileSystem()
 
 void FileSystem::save()
 {
+    fileMetadata->idKeys = idKeys.size();
+
     FileMetadataOnDisk meta = fileMetadata->toDisk();
+
     dataFile.seekp(0, std::ios::beg);
     dataFile.write(reinterpret_cast<const char*>(&meta), sizeof(meta));
 
     dataFile.seekp(fileMetadata->idKeyOffset, std::ios::beg);
-    for (unsigned id = 0; id < nextID; ++id)
+
+    IDKeyOnDisk empty{};
+    for (unsigned i = 0; i < fileMetadata->maxIDKeys; ++i)
     {
-        IDKeyOnDisk diskKey{};
+        dataFile.write(reinterpret_cast<const char*>(&empty), sizeof(empty));
+    }
 
-        std::unordered_map<unsigned, IDKey>::iterator it = idKeys.find(id);
-        if (it != idKeys.end())
-        {
-            diskKey = it->second.toDisk();
-            //std::cout << "Adding dir " << it->second.name << " with ID:" << it->first << " and parentID: " << it->second.parentID << "\n";
-        }
+    dataFile.seekp(fileMetadata->idKeyOffset, std::ios::beg);
 
-        dataFile.write(reinterpret_cast<const char*>(&diskKey),sizeof(diskKey));
+    for (const auto& pair : idKeys)
+    {
+        const IDKey& key = pair.second;
+        //std::cout << "Saving: " << key.name << " ID=" << key.ID << " firstBlock=" << key.firstBlock << " size=" << key.size << "\n";
+
+        IDKeyOnDisk diskKey = key.toDisk();
+
+        //std::cout << "Saving: " << diskKey.name << " ID=" << diskKey.ID << " firstBlock=" << diskKey.firstBlock << " size=" << diskKey.size << "\n";
+
+        std::streampos pos = fileMetadata->idKeyOffset + key.ID * sizeof(IDKeyOnDisk);
+
+        dataFile.seekp(pos, std::ios::beg);
+        dataFile.write(reinterpret_cast<const char*>(&diskKey), sizeof(diskKey));
+
 
     }
 
     dataFile.seekp(fileMetadata->isUsedOffset, std::ios::beg);
+
     for (bool used : isUsed)
     {
-        bool v = used;
-        dataFile.write(reinterpret_cast<const char*>(&v), sizeof(v));
+        dataFile.write(reinterpret_cast<const char*>(&used), sizeof(bool));
     }
-
-    //blocks
 
     dataFile.flush();
 }
@@ -95,13 +114,19 @@ void FileSystem::buildTree()
         IDKey& key = it->second;
 
         Node* node;
+
+
+
         if (key.isDir)
         {
             node = new DirNode();
         }
         else
         {
-            node = new FileNode();
+            FileNode* file = new FileNode();
+            file->setSize(key.size);
+            file->setFirstBlock(key.firstBlock);
+            node = file;
         }
 
         node->setName(key.name);
@@ -348,6 +373,119 @@ void FileSystem::cd(std::string &path)
     this->currDir = node;
 }
 
+void FileSystem::cp(std::string &source, std::string &destination)
+{
+    std::string parentPath, name;
+
+    if (!splitPath(source,parentPath,name))
+    {
+        std::cout << "Invalid source!\n";
+        return;
+    }
+
+
+    DirNode* srcDir = reachPath(parentPath);
+    if (!srcDir)
+    {
+        std::cout << "Source directory not found!\n";
+        return;
+    }
+
+    DirNode* destDir = reachPath(destination);
+    if (!destDir)
+    {
+        std::cout << "Destination directory not found!\n";
+        return;
+    }
+
+    std::vector<Node*> matches;
+
+    std::vector<Node*> children = srcDir->getChildren();
+
+    for (unsigned i = 0;i<children.size();i++)
+    {
+        Node* node = children[i];
+        if (!node->isDir() && matchPattern(node->getName(),name))
+        {
+            matches.push_back(node);
+        }
+    }
+
+    for (unsigned i = 0;i<matches.size();i++)
+    {
+        FileNode* srcFile = reinterpret_cast<FileNode*>(matches[i]);
+        std::vector<char> buff = allocator->readFile(srcFile->getFirstBlock());
+
+        unsigned newFirst = allocator->createFile(buff.data(),srcFile->getSize());
+
+        FileNode* newFile = new FileNode();
+        newFile->setId(nextID++);
+        std::string newName(srcFile->getName());
+        newName.append("_cpy");
+        newFile->setName(newName);
+        newFile->setFirstBlock(newFirst);
+        newFile->setSize(srcFile->getSize());
+        newFile->setParent(destDir);
+
+        destDir->addChild(newFile);
+
+        IDKey key(newFile->getId(),destDir->getId(),newFirst,srcFile->getSize(),false,newName);
+        idKeys[key.ID] = key;
+        fileMetadata->idKeys++;
+        idKeysCount++;
+
+        std::cout << "Copied item!\n";
+    }
+
+    save();
+
+}
+
+void FileSystem::rm(std::string &source)
+{
+
+}
+
+void FileSystem::cat(std::string &source)
+{
+    std::string parentPath, name;
+
+    if (!splitPath(source,parentPath,name))
+    {
+        std::cout << "Invalid source!\n";
+        return;
+    }
+
+    DirNode* srcDir = reachPath(parentPath);
+    if (!srcDir)
+    {
+        std::cout << "Source directory not found!\n";
+        return;
+    }
+
+    std::vector<Node*> children = srcDir->getChildren();
+
+    for (unsigned i = 0;i<children.size();i++)
+    {
+        Node* node = children[i];
+        if (!node->isDir() && matchPattern(node->getName(),name))
+        {
+            FileNode* fileNode = reinterpret_cast<FileNode*>(node);
+            std::vector<char> text = allocator->readFile(fileNode->getFirstBlock());
+
+            std::cout << fileNode->getName() << ": ";
+
+            for (unsigned j = 0; j < fileNode->getSize();j++)
+            {
+                std::cout << text[j];
+            }
+
+            std::cout << " \n";
+        }
+    }
+}
+
+//TODO IMPORTING A MULTI BLOCK THINGY (RABOTI?)
 void FileSystem::import(std::string& source, std::string& destination, std::string &param)
 {
     std::ifstream sourceFile(source, std::ios::binary|std::ios::ate);
@@ -416,24 +554,29 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
 
     unsigned firstBlock = fileNode->getFirstBlock();
 
-    if (param == "+append" && firstBlock!=END)
+    if (param == "+append" && firstBlock != END)
     {
-        allocator->appendFile(firstBlock,buffer.data(),fileSize);
-        fileNode->setSize(fileNode->getSize()+fileSize);
+        allocator->appendFile(firstBlock, buffer.data(), fileSize, fileNode->getSize());
+        fileNode->setSize(fileNode->getSize() + fileSize);
     }
     else
     {
-        if (firstBlock!=END)
+        if (firstBlock != END)
         {
             allocator->freeBlockChain(firstBlock);
         }
-        unsigned newFirst = allocator->createFile(buffer.data(),fileSize);
+        unsigned newFirst = allocator->createFile(buffer.data(), fileSize);
         fileNode->setFirstBlock(newFirst);
         fileNode->setSize(fileSize);
     }
 
+    IDKey& mapKey = idKeys[fileNode->getId()];
+    mapKey.size = fileNode->getSize();
+    mapKey.firstBlock = fileNode->getFirstBlock();
+
     std::cout << "Imported " << source << " into " << destination << "(" << name << ": " << fileNode->getSize() << " bytes)\n";
-    thisKey.size = fileNode->getSize();
+
+    save();
 }
 
 void FileSystem::loadIsUsedTable()
@@ -473,6 +616,48 @@ bool FileSystem::splitPath(const std::string& path, std::string& parentPath, std
 
     name = path.substr(pos + 1);
     return !name.empty();
+}
+
+bool FileSystem::matchPattern(const std::string &str, const std::string &pattern)
+{
+    unsigned strPos = 0;
+    unsigned patternPos = 0;
+
+    int starPos = -1;
+    int matchPos = 0;
+
+    while (strPos<str.size())
+    {
+        if (patternPos<pattern.size() && (str[strPos] == pattern[patternPos] || pattern[patternPos] == '?'))
+        {
+            strPos++;
+            patternPos++;
+        }
+        else if (patternPos<pattern.size() && pattern[patternPos] == '*')
+        {
+            starPos = patternPos;
+            matchPos = strPos;
+            patternPos++;
+        }
+        else if (starPos!=-1)
+        {
+            patternPos = starPos+1;
+            matchPos++;
+            strPos = matchPos;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    while (patternPos<pattern.size() && pattern[patternPos] == '*')
+    {
+        patternPos++;
+    }
+
+    return patternPos==pattern.size();
+
 }
 
 DirNode* FileSystem::reachPath(const std::string &path)

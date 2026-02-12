@@ -97,14 +97,13 @@ unsigned BlockAllocator::overrideFile(unsigned firstBlock, const char* data, uns
     return newFirst;
 }
 
-void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned size)
+void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned size, unsigned fileSize)
 {
     if (!data || size == 0) return;
 
     unsigned remaining = size;
-    unsigned written = 0;
+    const char* currPos = data;
     unsigned currentBlock = firstBlock;
-
 
     if (currentBlock == END)
     {
@@ -114,7 +113,8 @@ void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned 
     else
     {
         unsigned next;
-        while (true) {
+        while (true)
+        {
             dataFile.seekg(dataBlockOffset + currentBlock * blockSize, std::ios::beg);
             dataFile.read(reinterpret_cast<char*>(&next), sizeof(next));
             if (next == END) break;
@@ -122,37 +122,84 @@ void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned 
         }
     }
 
-    while (remaining > 0) {
-        unsigned nextBlock = END;
-        unsigned chunkSize = remaining;
-
-        if (remaining > blockSize-sizeof(unsigned))
+    unsigned usedBytes = fileSize % (blockSize - sizeof(unsigned));
+    if (usedBytes > 0 && usedBytes < blockSize - sizeof(unsigned))
+    {
+        unsigned space = blockSize - sizeof(unsigned) - usedBytes;
+        unsigned toWrite = space;
+        if (space>remaining)
         {
-            chunkSize = blockSize-sizeof(unsigned);
+            toWrite = remaining;
         }
 
-        if (chunkSize < remaining) {
-            nextBlock = allocateBlock();
-        }
+        dataFile.seekp(dataBlockOffset + currentBlock * blockSize + sizeof(unsigned) + usedBytes, std::ios::beg);
+        dataFile.write(currPos, toWrite);
 
+        currPos += toWrite;
+        remaining -= toWrite;
+    }
+
+    // Allocate new blocks for the remaining data
+    while (remaining > 0)
+    {
+        unsigned newBlock = allocateBlock();
+
+        // Link from previous last block
         dataFile.seekp(dataBlockOffset + currentBlock * blockSize, std::ios::beg);
+        dataFile.write(reinterpret_cast<const char*>(&newBlock), sizeof(newBlock));
 
-        dataFile.write(reinterpret_cast<const char*>(&nextBlock), sizeof(nextBlock));
+        unsigned toWrite = remaining;
+        if (remaining>blockSize-sizeof(unsigned))
+        {
+            toWrite = blockSize-sizeof(unsigned);
+        }
+        dataFile.seekp(dataBlockOffset + newBlock * blockSize + sizeof(unsigned), std::ios::beg);
+        dataFile.write(currPos, toWrite);
 
-        dataFile.write(data + written, chunkSize);
-
-
-        if (chunkSize < blockSize-sizeof(unsigned)) {
-            std::vector<char> padding(blockSize-sizeof(unsigned) - chunkSize, 0);
-
+        // Pad last block if needed
+        if (toWrite < blockSize - sizeof(unsigned))
+        {
+            std::vector<char> padding(blockSize - sizeof(unsigned) - toWrite, 0);
             dataFile.write(padding.data(), padding.size());
         }
 
-        written += chunkSize;
-        remaining -= chunkSize;
-        currentBlock = nextBlock;
+        currPos += toWrite;
+        remaining -= toWrite;
+        currentBlock = newBlock;
     }
 
     dataFile.flush();
+}
+
+std::vector<char> BlockAllocator::readFile(unsigned firstBlock)
+{
+    std::vector<char> result;
+
+    //TODO PROBLEM
+    if (firstBlock==END)
+    {
+        std::cout << "There is no data to read!\n";
+        return result;
+    }
+
+    unsigned current = firstBlock;
+
+    while (current!=END)
+    {
+        std::streampos pos = dataBlockOffset + current*BLOCK_SIZE;
+        dataFile.seekg(pos,std::ios::beg);
+
+        unsigned next;
+        dataFile.read(reinterpret_cast<char*>(&next),sizeof(unsigned));
+
+        std::vector<char> buffer(BLOCK_SIZE-sizeof(unsigned));
+        dataFile.read(buffer.data(),BLOCK_SIZE-sizeof(unsigned));
+
+        result.insert(result.end(),buffer.begin(),buffer.end());
+
+        current = next;
+    }
+
+    return result;
 }
 

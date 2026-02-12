@@ -22,7 +22,8 @@ public:
 public:
     unsigned createFile(const char* data, unsigned size);
     unsigned overrideFile(unsigned firstBlock, const char* data, unsigned size);
-    void appendFile(unsigned firstBlock, const char* data, unsigned size);
+    void appendFile(unsigned firstBlock, const char* data, unsigned size, unsigned);
+    std::vector<char> readFile(unsigned firstBlock);
 
 private:
     std::fstream& dataFile;

@@ -33,7 +33,12 @@ public:
     void rmdir(std::string& path);
     void ls(std::string& path);
     void cd(std::string& path);
+    void cp(std::string& source, std::string& destination);
+    void rm(std::string& source);
+    void cat(std::string& source);
     void import(std::string& source, std::string& destination, std::string& param);
+
+
 
     //change to private and add getters setters
 public:
@@ -53,6 +58,7 @@ private:
 
 private:
     bool splitPath(const std::string& path, std::string& parentPath, std::string& name);
+    bool matchPattern(const std::string& str, const std::string& pattern);
     DirNode* reachPath(const std::string& path);
     DirNode* getRoot();
 };

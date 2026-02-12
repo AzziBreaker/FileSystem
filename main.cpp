@@ -75,15 +75,15 @@ int main()
         }
         else if (tokens[0] == "cp")
         {
-
+            fs.cp(tokens[1],tokens[2]);
         }
         else if (tokens[0] == "rm")
         {
-
+            fs.rm(tokens[1]);
         }
         else if (tokens[0] == "cat")
         {
-
+            fs.cat(tokens[1]);
         }
         else if (tokens[0] == "import")
         {
