@@ -37,6 +37,7 @@ public:
     void rm(std::string& source);
     void cat(std::string& source);
     void import(std::string& source, std::string& destination, std::string& param);
+    void exportf(std::string& source, std::string& destination);
 
 
 
@@ -51,6 +52,7 @@ public:
     DirNode* currDir;
     unsigned nextID;
     unsigned idKeysCount;
+    unsigned currSize;
 
 private:
     void loadIsUsedTable();

@@ -8,6 +8,7 @@
 
 FileSystem::FileSystem(const std::string& fileName)
 {
+    currSize = 0;
     unsigned maxID = 0;
     dataFile.open(fileName, std::ios::binary | std::ios::in | std::ios::out);
     if (!dataFile) {
@@ -18,6 +19,7 @@ FileSystem::FileSystem(const std::string& fileName)
     FileMetadataOnDisk diskMeta{};
     dataFile.read(reinterpret_cast<char*>(&diskMeta), sizeof(diskMeta));
     this->fileMetadata = new FileMetadata(diskMeta);
+    currSize+=sizeof(diskMeta);
     this->idKeysCount = fileMetadata->idKeys;
 
     for (unsigned i = 0; i < fileMetadata->idKeys; ++i)
@@ -34,6 +36,11 @@ FileSystem::FileSystem(const std::string& fileName)
         {
             maxID = diskKey.ID;
         }
+        if (!diskKey.isDir)
+        {
+            currSize+=diskKey.size;
+        }
+        currSize+=sizeof(IDKeyOnDisk);
         IDKey key(diskKey);
         this->idKeys.insert({key.ID,key});
 
@@ -202,10 +209,13 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
 
     this->fileMetadata = new FileMetadata(fileName,maxSize);
 
+    currSize+=sizeof(FileMetadataOnDisk);
+
     std::string name = "root";
     IDKey rootKey(0, 0, 0, 0, true,name);
-
     idKeys[rootKey.ID] = rootKey;
+
+    currSize+=sizeof(IDKeyOnDisk);
 
     this->root = new DirNode();
     root->setId(rootKey.ID);
@@ -230,14 +240,19 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
     {
         bool val = false;
         dataFile.write(reinterpret_cast<const char*>(&val), sizeof(bool));
+        currSize++;
     }
-
 
     std::cout << "File system created successfully!\n";
 }
 
 void FileSystem::mkdir(std::string& path)
 {
+    if (currSize+sizeof(IDKeyOnDisk) > fileMetadata->maxSize)
+    {
+        std::cout << "Cannot add folder, not enough space!\n";
+    }
+
     std::string parentPath, dirName;
     if (!splitPath(path,parentPath,dirName))
     {
@@ -281,6 +296,8 @@ void FileSystem::mkdir(std::string& path)
     dir->setParent(parent);
 
     parent->addChild(dir);
+
+    currSize+=sizeof(IDKeyOnDisk);
 
     save();
 }
@@ -327,6 +344,7 @@ void FileSystem::rmdir(std::string& path)
     delete node;
     std::cout << "Removed directory!\n";
 
+    currSize-=sizeof(IDKeyOnDisk);
     save();
 }
 
@@ -418,6 +436,12 @@ void FileSystem::cp(std::string &source, std::string &destination)
         FileNode* srcFile = reinterpret_cast<FileNode*>(matches[i]);
         std::vector<char> buff = allocator->readFile(srcFile->getFirstBlock());
 
+        if (currSize+(buff.size()+sizeof(IDKeyOnDisk)) > fileMetadata->maxSize)
+        {
+            std::cout << "Cant copy " << srcFile->getName() << " onward!\n";
+            return;
+        }
+
         unsigned newFirst = allocator->createFile(buff.data(),srcFile->getSize());
 
         FileNode* newFile = new FileNode();
@@ -437,6 +461,7 @@ void FileSystem::cp(std::string &source, std::string &destination)
         idKeysCount++;
 
         std::cout << "Copied item!\n";
+        currSize+=(buff.size()+sizeof(IDKeyOnDisk));
     }
 
     save();
@@ -494,6 +519,7 @@ void FileSystem::rm(std::string &path)
         std::cout << "Removed file " << node->getName() << "\n";
 
         delete node;
+        currSize-=sizeof(IDKeyOnDisk);
     }
 
     save();
@@ -548,6 +574,13 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
     }
 
     int fileSize = sourceFile.tellg();
+
+    if (currSize+fileSize+sizeof(IDKeyOnDisk) > fileMetadata->maxSize)
+    {
+        std::cout << "Cannot import! Not enough space!\n";
+        return;
+    }
+
     sourceFile.seekg(0, std::ios::beg);
 
     if (fileSize <= 0) {
@@ -591,6 +624,7 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
         idKeys[key.ID] = key;
         fileMetadata->idKeys++;
         idKeysCount++;
+        currSize+=sizeof(IDKeyOnDisk);
     }
 
     unsigned firstBlock = fileNode->getFirstBlock();
@@ -614,10 +648,59 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
     IDKey& mapKey = idKeys[fileNode->getId()];
     mapKey.size = fileNode->getSize();
     mapKey.firstBlock = fileNode->getFirstBlock();
+    currSize+=fileSize;
 
     std::cout << "Imported " << source << " into " << destination<< " (" << name << ": " << fileNode->getSize() << " bytes)\n";
 
     save();
+}
+
+void FileSystem::exportf(std::string &source, std::string &destination)
+{
+    DirNode* parent;
+    std::string parentPath, fileName;
+
+    if (!splitPath(source, parentPath, fileName)) {
+        std::cout << "Invalid source path!\n";
+        return;
+    }
+
+    parent = reachPath(parentPath);
+    if (!parent) {
+        std::cout << "Source directory not found!\n";
+        return;
+    }
+
+    Node* node = parent->getChildFile(fileName);
+    if (!node)
+    {
+        std::cout << "File not found or is a directory!\n";
+        return;
+    }
+
+    FileNode* fileNode = dynamic_cast<FileNode*>(node);
+    if (!fileNode)
+    {
+        std::cout << "Error: could not cast to FileNode\n";
+        return;
+    }
+
+    std::vector<char> buffer = allocator->readFile(fileNode->getFirstBlock());
+
+    buffer.resize(fileNode->getSize());
+
+    std::ofstream outFile(destination, std::ios::binary | std::ios::trunc);
+
+    if (!outFile)
+    {
+        std::cout << "Failed to open destination file: " << destination << "\n";
+        return;
+    }
+
+    outFile.write(buffer.data(), buffer.size());
+    outFile.close();
+
+    std::cout << "Exported " << source << " to " << destination << " (" << buffer.size() << " bytes)\n";
 }
 
 void FileSystem::loadIsUsedTable()
@@ -630,6 +713,7 @@ void FileSystem::loadIsUsedTable()
     for (unsigned i = 0; i < blocks; i++)
     {
         bool used;
+        currSize++;
         dataFile.read(reinterpret_cast<char*>(&used), sizeof(bool));
         isUsed[i] = used;
     }

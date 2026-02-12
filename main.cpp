@@ -91,7 +91,7 @@ int main()
         }
         else if (tokens[0] == "export")
         {
-            //fs.export(tokens[1],tokens[2]);
+            fs.exportf(tokens[1],tokens[2]);
         }
         else if (tokens[0] == "help")
         {
