@@ -4,9 +4,6 @@
 
 #include "BlockAllocator.h"
 
-#include <ranges>
-
-
 BlockAllocator::BlockAllocator(std::fstream &file, std::vector<bool>& usedTable, unsigned dataOffset)
     :dataFile(file),isUsed(usedTable),blockSize(BLOCK_SIZE),dataBlockOffset(dataOffset)
 {
@@ -139,12 +136,10 @@ void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned 
         remaining -= toWrite;
     }
 
-    // Allocate new blocks for the remaining data
     while (remaining > 0)
     {
         unsigned newBlock = allocateBlock();
 
-        // Link from previous last block
         dataFile.seekp(dataBlockOffset + currentBlock * blockSize, std::ios::beg);
         dataFile.write(reinterpret_cast<const char*>(&newBlock), sizeof(newBlock));
 
@@ -156,7 +151,6 @@ void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned 
         dataFile.seekp(dataBlockOffset + newBlock * blockSize + sizeof(unsigned), std::ios::beg);
         dataFile.write(currPos, toWrite);
 
-        // Pad last block if needed
         if (toWrite < blockSize - sizeof(unsigned))
         {
             std::vector<char> padding(blockSize - sizeof(unsigned) - toWrite, 0);
@@ -175,7 +169,6 @@ std::vector<char> BlockAllocator::readFile(unsigned firstBlock)
 {
     std::vector<char> result;
 
-    //TODO PROBLEM
     if (firstBlock==END)
     {
         std::cout << "There is no data to read!\n";

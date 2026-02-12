@@ -30,14 +30,12 @@ public:
 public:
     void setId(unsigned);
     void setName(std::string&);
-    void setCopy();
     void setParent(DirNode*);
 
 private:
     std::string name;
     DirNode* parent;
     unsigned id;
-    bool isCopy;
 };
 
 #endif //FILESYSTEM_NODE_H

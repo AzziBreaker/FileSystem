@@ -4,8 +4,6 @@
 
 #include "FileSystem.h"
 
-#include <ranges>
-
 FileSystem::FileSystem(const std::string& fileName)
 {
     currSize = 0;
@@ -204,10 +202,24 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
     std::cout << "What is the file max size?\n";
 
     unsigned maxSize;
-    std::cin >> maxSize;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    this->fileMetadata = new FileMetadata(fileName,maxSize);
+
+    while (true)
+    {
+        try
+        {
+            std::cin >> maxSize;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            this->fileMetadata = new FileMetadata(fileName,maxSize);
+        } catch (const std::exception& e)
+        {
+            std::cout << "Try a bigger size!\n";
+            continue;
+        }
+        break;
+    }
+
+
 
     currSize+=sizeof(FileMetadataOnDisk);
 
@@ -243,7 +255,13 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
         currSize++;
     }
 
+    loadIsUsedTable();
+    buildTree();
+
     std::cout << "File system created successfully!\n";
+    dataFile.flush();
+    this->allocator = new BlockAllocator(dataFile,isUsed,this->fileMetadata->dataBlockOffset);
+    save();
 }
 
 void FileSystem::mkdir(std::string& path)
@@ -390,6 +408,7 @@ void FileSystem::cd(std::string &path)
         }
     }
 
+    std::cout << "Directory changed to " << node->getName() << "\n";
     this->currDir = node;
 }
 
@@ -511,8 +530,9 @@ void FileSystem::rm(std::string &path)
         }
 
         parent->removeChild(node);
-
+        currSize-= node->getSize();
         idKeys.erase(node->getId());
+
         fileMetadata->idKeys--;
         idKeysCount--;
 
@@ -564,7 +584,6 @@ void FileSystem::cat(std::string &source)
     }
 }
 
-//TODO IMPORTING A MULTI BLOCK THINGY (RABOTI?)
 void FileSystem::import(std::string& source, std::string& destination, std::string &param)
 {
     std::ifstream sourceFile(source, std::ios::binary | std::ios::ate);

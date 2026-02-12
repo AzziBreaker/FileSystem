@@ -9,7 +9,6 @@
 
 #include <string>
 #include <fstream>
-#include <iostream>
 
 #include "FileMetadataOnDisk.h"
 

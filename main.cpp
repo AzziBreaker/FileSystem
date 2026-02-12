@@ -95,7 +95,16 @@ int main()
         }
         else if (tokens[0] == "help")
         {
-
+            std::cout   << "--available commands: \n"
+                        << " -mkdir <path>/<dirname> : makes a directory at path\n"
+                        << " -rmdir <path>/<dirname> : removes an empty directory at path\n"
+                        << " -cd <path> : changes current directory\n"
+                        << " -ls <path> : shows all contents of a directory\n"
+                        << " -cp <src> <dest> : copies file/ files from source to destination\n"
+                        << " -rm <name> <dest> : removes file/ files from destination\n"
+                        << " -cat <name> : shows contents of a file/ files\n"
+                        << " -import <src> <dest> optional <+append> : copies a file from src to our system\n"
+                        << " -import <src> <dest> : copies a file from out system to dest\n";
         }
         else if (tokens[0] == "save")
         {

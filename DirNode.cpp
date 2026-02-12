@@ -54,7 +54,7 @@ Node* DirNode::getChildFile(std::string & name)
 
     for (Node* node : this->children)
     {
-        if (node->getName() == name)
+        if (node->getName() == name && !node->isDir())
         {
             return node;
         }
