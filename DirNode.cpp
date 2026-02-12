@@ -47,6 +47,22 @@ Node* DirNode::getChild(std::string& name)
     return nullptr;
 }
 
+Node* DirNode::getChildFile(std::string & name)
+{
+    if (this->children.empty())
+        return nullptr;
+
+    for (Node* node : this->children)
+    {
+        if (node->getName() == name)
+        {
+            return node;
+        }
+    }
+
+    return nullptr;
+}
+
 std::vector<Node*> DirNode::getChildren() const
 {
     return this->children;

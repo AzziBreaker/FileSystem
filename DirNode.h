@@ -25,6 +25,7 @@ public:
 
 public:
     Node* getChild(std::string&);
+    Node* getChildFile(std::string&);
     std::vector<Node*> getChildren() const;
     inline unsigned getSize() const override {return 0;}
 

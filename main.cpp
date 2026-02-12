@@ -89,6 +89,14 @@ int main()
         {
             fs.import(tokens[1], tokens[2], tokens[3]);
         }
+        else if (tokens[0] == "export")
+        {
+            //fs.export(tokens[1],tokens[2]);
+        }
+        else if (tokens[0] == "help")
+        {
+
+        }
         else if (tokens[0] == "save")
         {
             fs.fileMetadata->print(std::cout);
