@@ -4,6 +4,8 @@
 
 #include "FileSystem.h"
 
+#include <ranges>
+
 FileSystem::FileSystem(const std::string& fileName)
 {
     unsigned maxID = 0;
@@ -23,10 +25,10 @@ FileSystem::FileSystem(const std::string& fileName)
         IDKeyOnDisk diskKey{};
         dataFile.read(reinterpret_cast<char*>(&diskKey), sizeof(diskKey));
 
-        std::cout << "LOADED ID: " << diskKey.ID
-            << " size: " << diskKey.size
-            << " firstBlock: " << diskKey.firstBlock
-            << "\n";
+        /*std::cout << "LOADED ID: " << diskKey.ID
+        << " size: " << diskKey.size
+        << " firstBlock: " << diskKey.firstBlock
+        << "\n";*/
 
         if (maxID < diskKey.ID)
         {
@@ -441,9 +443,60 @@ void FileSystem::cp(std::string &source, std::string &destination)
 
 }
 
-void FileSystem::rm(std::string &source)
+void FileSystem::rm(std::string &path)
 {
+    std::string parentPath, pattern;
 
+    if (!splitPath(path,parentPath,pattern))
+    {
+        std::cout << "Invalid path!\n";
+        return;
+    }
+
+    DirNode* parent = reachPath(parentPath);
+    if (!parent)
+    {
+        std::cout << "Parent directory does not exist!\n";
+        return;
+    }
+
+    std::vector<Node*> children = parent->getChildren();
+
+    std::vector<FileNode*> toRemove;
+
+    for (Node* node: children)
+    {
+        if (!node->isDir() && matchPattern(node->getName(),pattern))
+        {
+            toRemove.push_back(dynamic_cast<FileNode*>(node));
+        }
+    }
+
+    if (toRemove.empty())
+    {
+        std::cout << "No matched items to remove!\n";
+        return;
+    }
+
+    for (FileNode* node: toRemove)
+    {
+        if (node->getFirstBlock() != END)
+        {
+            allocator->freeBlockChain(node->getFirstBlock());
+        }
+
+        parent->removeChild(node);
+
+        idKeys.erase(node->getId());
+        fileMetadata->idKeys--;
+        idKeysCount--;
+
+        std::cout << "Removed file " << node->getName() << "\n";
+
+        delete node;
+    }
+
+    save();
 }
 
 void FileSystem::cat(std::string &source)
