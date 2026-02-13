@@ -165,7 +165,7 @@ void FileSystem::buildTree()
         if (!parent)
         {
             std::cout << "Error: parentID " << key.parentID << " not found for node " << key.name << "\n";
-            throw;
+            return;
         }
 
         child->setParent(parent);
@@ -195,7 +195,7 @@ void FileSystem::createEmptyFileSystem(const std::string& fileName)
     if (!dataFile)
     {
         std::cerr << "Failed to create filesystem file\n";
-        throw;
+        return;
     }
 
     std::cout << fileName << " opened successfully!\n";
@@ -275,7 +275,7 @@ void FileSystem::mkdir(std::string& path)
     if (!splitPath(path,parentPath,dirName))
     {
         std::cout << "Invalid path name!\n";
-        throw;
+        return;
     }
 
     DirNode* parent;
@@ -291,13 +291,13 @@ void FileSystem::mkdir(std::string& path)
     if (!parent)
     {
         std::cout << "Parent directory doesnt exist!\n";
-        throw;
+        return;
     }
 
     //????????
     if (parent->getChild(dirName)) {
         std::cout << "Directory already exists!\n";
-        throw;
+        return;
     }
 
     std::cout << "Creating directory " << dirName << " in dir: " << parent->getName() << " with ID: " << parent->getId() << "\n";
@@ -587,7 +587,8 @@ void FileSystem::cat(std::string &source)
 void FileSystem::import(std::string& source, std::string& destination, std::string &param)
 {
     std::ifstream sourceFile(source, std::ios::binary | std::ios::ate);
-    if (!sourceFile) {
+    if (!sourceFile)
+    {
         std::cout << "Failed to open source file: " << source << "\n";
         return;
     }
@@ -602,7 +603,8 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
 
     sourceFile.seekg(0, std::ios::beg);
 
-    if (fileSize <= 0) {
+    if (fileSize <= 0)
+    {
         std::cout << "File is empty! Cannot be copied!\n";
         return;
     }
@@ -612,13 +614,15 @@ void FileSystem::import(std::string& source, std::string& destination, std::stri
     sourceFile.close();
 
     std::string parentPath, name;
-    if (!splitPath(destination, parentPath, name)) {
+    if (!splitPath(destination, parentPath, name))
+    {
         std::cout << "Invalid path!\n";
         return;
     }
 
     DirNode* parent = reachPath(parentPath);
-    if (!parent) {
+    if (!parent)
+    {
         std::cout << "Destination directory does not exist!\n";
         return;
     }

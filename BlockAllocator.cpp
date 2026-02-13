@@ -31,6 +31,7 @@ void BlockAllocator::freeBlockChain(unsigned firstBlock)
     unsigned current = firstBlock;
     while (current != 0xFFFFFFFF)
     {
+        //std::cout << "FINDING!";
         isUsed[current] = false;
 
         dataFile.seekg(dataBlockOffset + current * blockSize, std::ios::beg);
@@ -94,7 +95,7 @@ unsigned BlockAllocator::overrideFile(unsigned firstBlock, const char* data, uns
     return newFirst;
 }
 
-void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned size, unsigned fileSize)
+void BlockAllocator::appendFile(unsigned& firstBlock, const char* data, unsigned size, unsigned fileSize)
 {
     if (!data || size == 0) return;
 
@@ -162,6 +163,9 @@ void BlockAllocator::appendFile(unsigned firstBlock, const char* data, unsigned 
         currentBlock = newBlock;
     }
 
+    //dobaveno sled predavane
+    dataFile.seekp(dataBlockOffset + currentBlock * blockSize, std::ios::beg);
+    dataFile.write(reinterpret_cast<const char*>(&END), sizeof(unsigned));
     dataFile.flush();
 }
 

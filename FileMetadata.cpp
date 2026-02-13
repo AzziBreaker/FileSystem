@@ -30,7 +30,7 @@ FileMetadata::FileMetadata(const std::string& name, unsigned maxSize)
 
     this->maxIDKeys = maxSize / blockSize;
 
-    std::cout << dataBlocks << "\n";
+    //std::cout << dataBlocks << "\n";
 
     this->isUsedOffset = idKeyOffset + maxIDKeys*sizeof(IDKeyOnDisk);
     this->dataBlockOffset = isUsedOffset + (maxSize / blockSize);
